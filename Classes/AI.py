@@ -43,14 +43,13 @@ class AI:
             # Q-learning: we look up best action for self.player
             best_move = self.get_best_action_from_Q(board, self.player)
             if best_move is None:
-                # fallback if unseen state
                 best_move = self.rnd(board)
                 chosen_method = "Q-random"
             else:
                 chosen_method = "Q-learning"
             chosen_move = best_move
 
-        print(f"[AI] Chosen move {chosen_move} with method: {chosen_method}")
+        #print(f"[AI] Chosen move {chosen_move} with method: {chosen_method}")
         return chosen_move
 
     # -----------------------------
@@ -131,79 +130,100 @@ class AI:
     #  SELF-PLAY TRAINING METHOD
     # -----------------------------
 
-    def self_play_training(self, episodes, alpha, gamma, epsilon):
+    def training(self, episodes, alpha, gamma, epsilon_start, epsilon_end):
         """
-        Train two Q-learning agents (one for each player) by letting them play against each other.
-        Each agent records its own history; at the end of the game, each agent's history is used
-        to update the shared Q-table using a discounted Monte Carlo update.
+        Train the Q-learning agent for player2 by letting it play against a random opponent (player1).
+        Only player2's moves are recorded and used to update the shared Q-table using a discounted Monte Carlo update.
+        Epsilon decays exponentially over time to encourage more exploitation as training progresses.
+
+        Hyperparameters:
+          - alpha: Learning rate. Determines how much newly acquired information overrides old information.
+          - gamma: Discount factor. Determines the importance of future rewards.
+          - epsilon: Controls exploration (random moves) vs. exploitation (greedy moves).
         """
-        # Shared Q-table
         Q = {}
-        # Create two agents: one for player 1 and one for player 2.
+
+        # Initialize players:
+        # Agent1 is a random opponent (level 0).
         agent1 = AI(level=2, player=1, Q=Q)
+        # Agent2 is the Q-learning agent.
         agent2 = AI(level=2, player=2, Q=Q)
 
+        epsilon = epsilon_start
 
         for ep in range(episodes):
-
             board = Board()
             done = False
-            # Separate histories for each agent
-            #history_agent1 = []
+            history_agent1 = []
             history_agent2 = []
-            # Let player 1 (agent1) start the game.
+            # Let agent1 start the game.
             current_agent = agent1
 
             while not done:
                 state_key = current_agent.make_state_key(board, current_agent.player)
-                # Epsilon-greedy action selection.
-                if random.random() < epsilon:
-                    action = current_agent.rnd(board)
-                else:
-                    action = current_agent.get_best_action_from_Q(board, current_agent.player)
-                    if action is None:
-                        action = current_agent.rnd(board)
 
-                # Save the move in the appropriate history.
                 if current_agent.player == 1:
+                    if random.random() < epsilon:
+                        action = current_agent.rnd(board)
+                    else:
+                        action = current_agent.eval(board)
+                        if action is None:
+                            action = current_agent.rnd(board)
+                    # Record only player1's state and action for Q-updates.
                     history_agent1.append((state_key, action))
+
                 else:
+                    # For player2, use epsilon-greedy Q-learning.
+                    if random.random() < epsilon:
+                        action = current_agent.rnd(board)
+                    else:
+                        action = current_agent.eval(board)
+                        if action is None:
+                            action = current_agent.rnd(board)
+                    # Record only player2's state and action for Q-updates.
                     history_agent2.append((state_key, action))
 
-                # Execute the move.
                 board.mark_sqr(action[0], action[1], current_agent.player)
 
-                # Check for terminal condition.
+                # Check if game is over.
                 if board.final_state() != 0 or board.isfull():
                     done = True
                 else:
-                    # Switch agent for the next move.
+                    # Alternate between the two agents.
                     current_agent = agent2 if current_agent == agent1 else agent1
 
-            # Determine game outcome rewards.
-            final = board.final_state()  # 1 if player 1 wins, 2 if player 2 wins, 0 for draw.
-            if final == 1:
-                reward1, reward2 = 1, -1
-            elif final == 2:
-                reward1, reward2 = -1, 1
-            else:
-                reward1, reward2 = 0, 0
+            # Determine the terminal reward from player2's perspective:
+            # +1 if player2 wins, -1 if player1 wins, 0 for draw.
+            final = board.final_state()
+            reward2 = 1 if final == 2 else (-1 if final == 1 else 0)
+            reward1 = -1 if final == 2 else (1 if final == 1 else 0)
 
-            # Update Q-table for agent1's moves.
+            # (Optional) Intermediate reward shaping could be added here based on board heuristics.
+            # For example, if a move leads to a more favorable board state, you could add a small bonus.
+
+            # Update Q-values using discounted Monte Carlo updates.
             G = 0
             for state_key, action in reversed(history_agent1):
                 G = reward1 + gamma * G
                 old_q = Q.get((state_key, action), 0.0)
                 Q[(state_key, action)] = old_q + alpha * (G - old_q)
 
-            # Update Q-table for agent2's moves.
+            #print(history_agent1)
+
+
+            # Update Q-values using discounted Monte Carlo updates.
             G = 0
             for state_key, action in reversed(history_agent2):
                 G = reward2 + gamma * G
                 old_q = Q.get((state_key, action), 0.0)
                 Q[(state_key, action)] = old_q + alpha * (G - old_q)
 
-        self.Q = Q  # Update this agent's Q-table with the shared one.
+            print(f"Reward1: {reward1}, Reward2: {reward2}")
+            # Exponential decay of epsilon.
+            epsilon = max(epsilon_end, epsilon * (epsilon_end / epsilon_start) ** (1.0 / episodes))
+
+
+        self.Q = Q
         return Q
 
     # -----------------------------

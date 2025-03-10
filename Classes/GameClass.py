@@ -8,10 +8,11 @@ class Game:
         self.board = Board()
         # Instead of AI(level=1, player=2),
         # let’s assume we want Q-learning for X=1
-        self.ai = AI(level=2, player=2)
+
+        self.ai = AI(level=2, player=2) # 1=player starts, 2=AI starts
         self.ai.load_Q('qtable.pkl')
 
-        self.player = 1  # 1 -> X, matches AI
+        self.player = 1
         self.gamemode = 'ai'
         self.running = True
         self.show_lines()
