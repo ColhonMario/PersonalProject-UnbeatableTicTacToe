@@ -12,10 +12,11 @@ X_WIDTH = 20
 RADIUS = SQSIZE // 4
 
 # ---------- COLORS ----------
-BG_COLOR = (12, 123, 234)
-LINE_COLOR = (43, 120, 210)
-CIRCLE_COLOR = (239, 231, 200)
-X_COLOR = (66, 66, 66)
+BG_COLOR    = (46, 0, 63)
+LINE_COLOR  = (0, 158, 146)
+X_COLOR     = (66, 66, 66)
+CIRCLE_COLOR     = (239, 231, 200)
+
 
 # ---------- PYGAME SETUP ----------
 pygame.init()

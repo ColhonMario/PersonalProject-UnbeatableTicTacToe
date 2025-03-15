@@ -6,10 +6,8 @@ from Main.constants import *
 class Game:
     def __init__(self):
         self.board = Board()
-        # Instead of AI(level=1, player=2),
-        # let’s assume we want Q-learning for X=1
 
-        self.ai = AI(level=2, player=2) # 1=player starts, 2=AI starts
+        self.ai = AI(level=2, player=2) # 2=player starts, 1=AI starts; level0=random,level1=minimax,level2=qlearning
         self.ai.load_Q('qtable.pkl')
 
         self.player = 1

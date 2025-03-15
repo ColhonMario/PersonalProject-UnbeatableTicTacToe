@@ -132,8 +132,8 @@ class AI:
 
     def training(self, episodes, alpha, gamma, epsilon_start, epsilon_end):
         """
-        Train the Q-learning agent for player2 by letting it play against a random opponent (player1).
-        Only player2's moves are recorded and used to update the shared Q-table using a discounted Monte Carlo update.
+        Train the Q-learning agent for both player1 and player2 by letting them play against eachother.
+        Both player's moves are recorded and used to update the shared Q-table using a discounted Monte Carlo update.
         Epsilon decays exponentially over time to encourage more exploitation as training progresses.
 
         Hyperparameters:
@@ -141,12 +141,13 @@ class AI:
           - gamma: Discount factor. Determines the importance of future rewards.
           - epsilon: Controls exploration (random moves) vs. exploitation (greedy moves).
         """
+
         Q = {}
 
         # Initialize players:
-        # Agent1 is a random opponent (level 0).
+        # Agent2 is a Q-learning agent.
         agent1 = AI(level=2, player=1, Q=Q)
-        # Agent2 is the Q-learning agent.
+        # Agent2 is a Q-learning agent.
         agent2 = AI(level=2, player=2, Q=Q)
 
         epsilon = epsilon_start
@@ -192,14 +193,11 @@ class AI:
                     # Alternate between the two agents.
                     current_agent = agent2 if current_agent == agent1 else agent1
 
-            # Determine the terminal reward from player2's perspective:
             # +1 if player2 wins, -1 if player1 wins, 0 for draw.
             final = board.final_state()
             reward2 = 1 if final == 2 else (-1 if final == 1 else 0)
             reward1 = -1 if final == 2 else (1 if final == 1 else 0)
 
-            # (Optional) Intermediate reward shaping could be added here based on board heuristics.
-            # For example, if a move leads to a more favorable board state, you could add a small bonus.
 
             # Update Q-values using discounted Monte Carlo updates.
             G = 0
@@ -207,8 +205,6 @@ class AI:
                 G = reward1 + gamma * G
                 old_q = Q.get((state_key, action), 0.0)
                 Q[(state_key, action)] = old_q + alpha * (G - old_q)
-
-            #print(history_agent1)
 
 
             # Update Q-values using discounted Monte Carlo updates.
@@ -218,7 +214,6 @@ class AI:
                 old_q = Q.get((state_key, action), 0.0)
                 Q[(state_key, action)] = old_q + alpha * (G - old_q)
 
-            print(f"Reward1: {reward1}, Reward2: {reward2}")
             # Exponential decay of epsilon.
             epsilon = max(epsilon_end, epsilon * (epsilon_end / epsilon_start) ** (1.0 / episodes))
 
@@ -231,14 +226,14 @@ class AI:
     # -----------------------------
     def save_Q(self, filename='qtable.pkl'):
         with open(filename, 'wb') as f:
-            print("Q-table loaded. Size:", len(self.Q))
+            #print("Q-table loaded. Size:", len(self.Q))
             pickle.dump(self.Q, f)
 
     def load_Q(self, filename='qtable.pkl'):
-        print("[AI] Loading Q-table from:", filename)
+        #print("[AI] Loading Q-table from:", filename)
         if os.path.exists(filename):
             with open(filename, 'rb') as f:
                 self.Q = pickle.load(f)
-            print("Q-table loaded. Size:", len(self.Q))
+            #print("Q-table loaded. Size:", len(self.Q))
         else:
             print(f"File {filename} not found!")
